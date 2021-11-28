@@ -17,7 +17,7 @@ void readObj(std::string filepath, Scene& scene);
 int main()
 {
     // 采样次数
-    const int SAMPLE =64;
+    const int SAMPLE =1;
     // 每次采样的亮度
     const double BRIGHTNESS = (2.0f * 3.1415926f) * (1.0f / double(SAMPLE));//因为是在半球上的均匀采样
 
@@ -181,6 +181,7 @@ void readObj(std::string filepath,Scene& scene) {
             vec3 point = 5 * vec3(x, y, z);
             point.z() += 1.0;
             point.y() -= 0.9;
+            point.x() += 0.09;
             vertices.push_back(point);
         }
         if (type == "f") {
