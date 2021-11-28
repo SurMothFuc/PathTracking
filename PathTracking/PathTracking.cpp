@@ -17,7 +17,7 @@ void readObj(std::string filepath, Scene& scene);
 int main()
 {
     // 采样次数
-    const int SAMPLE =1;
+    const int SAMPLE =8;
     // 每次采样的亮度
     const double BRIGHTNESS = (2.0f * 3.1415926f) * (1.0f / double(SAMPLE));//因为是在半球上的均匀采样
 
@@ -29,12 +29,12 @@ int main()
 
 
     // 光源
-   /* Triangle l1 = Triangle(vec3(0.4, 0.99, 0.4), vec3(-0.4, 0.99, -0.4), vec3(-0.4, 0.99, 0.4), vec3(1.0, 1.0, 1.0));
+    Triangle l1 = Triangle(vec3(0.4, 0.99, 0.4), vec3(-0.4, 0.99, -0.4), vec3(-0.4, 0.99, 0.4), vec3(1.0, 1.0, 1.0));
     Triangle l2 = Triangle(vec3(0.4, 0.99, 0.4), vec3(0.4, 0.99, -0.4), vec3(-0.4, 0.99, -0.4), vec3(1.0, 1.0, 1.0));
     l1.material.isEmissive = true;
     l2.material.isEmissive = true;
     scene.addShape(&l1);
-    scene.addShape(&l2);*/
+    scene.addShape(&l2);
     
 
     //under
@@ -43,21 +43,21 @@ int main()
     scene.addShape(tep);
     tep = new Triangle(vec3(1, -1, 1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(1.0, 1.0, 1.0));
     scene.addShape(tep);
-    //// top
+    // top
    
-    //tep = new Triangle(vec3(1, 1, 1), vec3(-1, 1, 1), vec3(-1, 1, -1), vec3(1.0, 1.0, 1.0));
-    //scene.addShape(tep);
-    //tep = new Triangle(vec3(1, 1, 1), vec3(-1, 1, -1), vec3(1, 1, -1), vec3(1.0, 1.0, 1.0));
-    //scene.addShape(tep);
-    // back
+    tep = new Triangle(vec3(1, 1, 1), vec3(-1, 1, 1), vec3(-1, 1, -1), vec3(1.0, 1.0, 1.0));
+    scene.addShape(tep);
+    tep = new Triangle(vec3(1, 1, 1), vec3(-1, 1, -1), vec3(1, 1, -1), vec3(1.0, 1.0, 1.0));
+    scene.addShape(tep);
+     //back
     scene.addShape(new Triangle(vec3(1, -1, -1), vec3(-1, 1, -1), vec3(-1, -1, -1), vec3(1.0, 1.0, 1.0)));
     scene.addShape(new Triangle(vec3(1, -1, -1), vec3(1, 1, -1), vec3(-1, 1, -1), vec3(1.0, 1.0, 1.0)));
-    //// left
-    //scene.addShape(new Triangle(vec3(-1, -1, -1), vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1.0, 0.0, 0.0)));
-    //scene.addShape(new Triangle(vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(-1, 1, 1), vec3(1.0, 0.0, 0.0)));
-    //// right
-    //scene.addShape(new Triangle(vec3(1, 1, 1), vec3(1, -1, -1), vec3(1, -1, 1), vec3(0.0, 1.0, 0.0)));
-    //scene.addShape(new Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1), vec3(0.0, 1.0, 0.0)));
+    // left
+    scene.addShape(new Triangle(vec3(-1, -1, -1), vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1.0, 0.0, 0.0)));
+    scene.addShape(new Triangle(vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(-1, 1, 1), vec3(1.0, 0.0, 0.0)));
+    // right
+    scene.addShape(new Triangle(vec3(1, 1, 1), vec3(1, -1, -1), vec3(1, -1, 1), vec3(0.0, 1.0, 0.0)));
+    scene.addShape(new Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1), vec3(0.0, 1.0, 0.0)));
 
 
     double* image = (double*)malloc(sizeof(double) * scene.WIDTH * scene.HEIGHT * 3);
@@ -178,8 +178,8 @@ void readObj(std::string filepath,Scene& scene) {
         sin >> type;
         if (type == "v") {
             sin >> x >> y >> z;
-            vec3 point = 5 * vec3(x, y, z);
-            point.z() += 1.0;
+            vec3 point = 7 * vec3(x, y, z);
+            point.z() ;
             point.y() -= 0.9;
             point.x() += 0.09;
             vertices.push_back(point);
@@ -189,7 +189,7 @@ void readObj(std::string filepath,Scene& scene) {
             Triangle* tep;
             tep = new Triangle(vertices[v0-1], vertices[v1 - 1], vertices[v2 - 1], vec3(1.0, 1.0, 1.0));
 
-            tep->material.isEmissive = true;
+            //tep->material.isEmissive = true;
             scene.addShape(tep);
 
         }
@@ -202,7 +202,7 @@ void readObj(std::string filepath,Scene& scene) {
 
 vec3 pathTracing(Scene scene, Ray ray, int depth)
 {
-    if (depth > 0) 
+    if (depth > 8) 
         return vec3(0.0,0.0,0.0);
 
     HitResult res = shoot(scene, ray);
