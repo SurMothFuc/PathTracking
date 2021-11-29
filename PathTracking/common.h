@@ -12,6 +12,10 @@
 using namespace std;
 using namespace Eigen;
 
+
+
+int totalcount = 0;
+
 template<class T>
 T Clamp(T x, T min, T max)//截断函数
 {
@@ -46,8 +50,12 @@ class Ray
 class Shape
 {
 public:
+
+    vec3 center;       // 中心 用于bvh构建
     Shape() {}
     virtual HitResult intersect(Ray ray) { return HitResult(); }//所有继承基类的函数应该实现求交的函数 并返回求交的结果
+    virtual vec3 minAA() { return vec3(0.0, 0.0, 0.0); }
+    virtual vec3 maxBB() { return vec3(0.0, 0.0, 0.0); }
 };
 class Triangle : public Shape
 {
@@ -58,6 +66,7 @@ public:
         p1 = P1, p2 = P2, p3 = P3;
         material.normal = ((p2 - p1).cross( p3 - p1)).normalized(); 
         material.color = C;
+        center = (P1 + P2 + P3) / 3;
     }
     vec3 p1, p2, p3;    // 三顶点
     Material material;  // 材质
@@ -65,6 +74,8 @@ public:
     // 与光线求交
     HitResult intersect(Ray ray)
     {
+
+        totalcount++;
         HitResult res;
         vec3 S = ray.startPoint;
         vec3 d = ray.direction;
@@ -96,6 +107,22 @@ public:
 
         return res;
     };
+    vec3 minAA() { 
+        return vec3(
+            min(p1.x(), min(p2.x(), p3.x())),
+            min(p1.y(), min(p2.y(), p3.y())),
+            min(p1.z(), min(p2.z(), p3.z())));
+    }
+    vec3 maxBB() {
+        return vec3(
+            max(p1.x(), max(p2.x(), p3.x())),
+            max(p1.y(), max(p2.y(), p3.y())),
+            max(p1.z(), max(p2.z(), p3.z())));
+    }
+
+
+
+
 };
 uniform_real_distribution<> dis(0.0, 1.0); //从均匀分布中生成随机的浮点数
 random_device rd;//生成一个为随机数
@@ -178,4 +205,217 @@ public:
 vec3 reflect(vec3 I, vec3 N)
 {
     return I - N * 2 * (I.transpose() * N);
+}
+
+
+//比较函数用以进行bvh划分
+bool cmpx(Shape* t1,  Shape* t2) {
+    return t1->center.x() < t2->center.x();
+}
+bool cmpy( Shape* t1,  Shape* t2) {
+    return t1->center.y() < t2->center.y();
+}
+bool cmpz( Shape* t1, Shape* t2) {
+    return t1->center.z() < t2->center.z();
+}
+
+class BVHNode {
+public:
+    BVHNode* left = NULL;       // 左右子树索引
+    BVHNode* right = NULL;
+    int n, index;               // 叶子节点信息               
+    vec3 AA, BB;                // 碰撞盒
+};
+// 构建 BVH
+BVHNode* buildBVH(std::vector<Shape*>& shapes, int l, int r, int n) {
+    if (l > r) return 0;
+
+    BVHNode* node = new BVHNode();
+    node->AA = vec3(FLT_MAX, FLT_MAX, FLT_MAX);
+    node->BB = vec3(FLT_MIN, FLT_MIN, FLT_MIN);
+
+    // 计算 AABB
+    for (int i = l; i <= r; i++) {
+        // 最小点 AA
+        vec3 minaa = shapes[i]->minAA();
+        node->AA.x() = min(node->AA.x(), minaa.x());
+        node->AA.y() = min(node->AA.y(), minaa.y());
+        node->AA.z() = min(node->AA.z(), minaa.z());
+        // 最大点 BB
+        vec3 maxbb = shapes[i]->maxBB();
+        node->BB.x() = max(node->BB.x(), maxbb.x());
+        node->BB.y() = max(node->BB.y(), maxbb.y());
+        node->BB.z() = max(node->BB.z(), maxbb.z());
+    }
+
+    // 不多于 n 个三角形 返回叶子节点
+    if ((r - l + 1) <= n) {
+        node->n = r - l + 1;
+        node->index = l;
+        return node;
+    }
+
+    float Cost = FLT_MAX;
+    int Axis = 0;
+    int Split = (l + r) / 2;
+    for (int axis = 0; axis < 3; axis++) {
+        // 分别按 x，y，z 轴排序
+        if (axis == 0) std::sort(shapes.begin() + l, shapes.begin() + r + 1, cmpx);
+        if (axis == 1) std::sort(shapes.begin() + l, shapes.begin() + r + 1, cmpy);
+        if (axis == 2) std::sort(shapes.begin() + l, shapes.begin() + r + 1, cmpz);
+
+        // leftMax[i]: [l, i] 中最大的 xyz 值
+        // leftMin[i]: [l, i] 中最小的 xyz 值
+        std::vector<vec3> leftMax(r - l + 1, vec3(FLT_MIN, FLT_MIN, FLT_MIN));
+        std::vector<vec3> leftMin(r - l + 1, vec3(FLT_MAX, FLT_MAX, FLT_MAX));
+        // 计算前缀 注意 i-l 以对齐到下标 0
+        for (int i = l; i <= r; i++) {
+            int bias = (i == l) ? 0 : 1;  // 第一个元素特殊处理
+            vec3 minaa = shapes[i]->minAA();
+            vec3 maxbb = shapes[i]->maxBB();
+
+            leftMax[i - l].x() = max(leftMax[i - l - bias].x(), maxbb.x());
+            leftMax[i - l].y() = max(leftMax[i - l - bias].y(), maxbb.y());
+            leftMax[i - l].z() = max(leftMax[i - l - bias].z(), maxbb.z());
+
+            leftMin[i - l].x() = min(leftMin[i - l - bias].x(), minaa.x());
+            leftMin[i - l].y() = min(leftMin[i - l - bias].y(), minaa.y());
+            leftMin[i - l].z() = min(leftMin[i - l - bias].z(), minaa.z());
+        }
+
+        // rightMax[i]: [i, r] 中最大的 xyz 值
+        // rightMin[i]: [i, r] 中最小的 xyz 值
+        std::vector<vec3> rightMax(r - l + 1, vec3(FLT_MIN, FLT_MIN, FLT_MIN));
+        std::vector<vec3> rightMin(r - l + 1, vec3(FLT_MAX, FLT_MAX, FLT_MAX));
+        // 计算后缀 注意 i-l 以对齐到下标 0
+        for (int i = r; i >= l; i--) {
+            vec3 minaa = shapes[i]->minAA();
+            vec3 maxbb = shapes[i]->maxBB();
+            int bias = (i == r) ? 0 : 1;  // 第一个元素特殊处理
+
+            rightMax[i - l].x() = max(rightMax[i - l + bias].x(), maxbb.x());
+            rightMax[i - l].y() = max(rightMax[i - l + bias].y(), maxbb.y());
+            rightMax[i - l].z() = max(rightMax[i - l + bias].z(), maxbb.z());
+
+            rightMin[i - l].x() = min(rightMin[i - l + bias].x(), minaa.x());
+            rightMin[i - l].y() = min(rightMin[i - l + bias].y(), minaa.y());
+            rightMin[i - l].z() = min(rightMin[i - l + bias].z(), minaa.z());
+        }
+
+        // 遍历寻找分割
+        float cost = FLT_MAX;
+        int split = l;
+        for (int i = l; i <= r - 1; i++) {
+            float lenx, leny, lenz;
+            // 左侧 [l, i]
+            vec3 leftAA = leftMin[i - l];
+            vec3 leftBB = leftMax[i - l];
+            lenx = leftBB.x() - leftAA.x();
+            leny = leftBB.y() - leftAA.y();
+            lenz = leftBB.z() - leftAA.z();
+            float leftS = 2.0 * ((lenx * leny) + (lenx * lenz) + (leny * lenz));
+            float leftCost = leftS * (i - l + 1);
+
+            // 右侧 [i+1, r]
+            vec3 rightAA = rightMin[i + 1 - l];
+            vec3 rightBB = rightMax[i + 1 - l];
+            lenx = rightBB.x() - rightAA.x();
+            leny = rightBB.y() - rightAA.y();
+            lenz = rightBB.z() - rightAA.z();
+            float rightS = 2.0 * ((lenx * leny) + (lenx * lenz) + (leny * lenz));
+            float rightCost = rightS * (r - i);
+
+            // 记录每个分割的最小答案
+            float totalCost = leftCost + rightCost;
+            if (totalCost < cost) {
+                cost = totalCost;
+                split = i;
+            }
+        }
+        // 记录每个轴的最佳答案
+        if (cost < Cost) {
+            Cost = cost;
+            Axis = axis;
+            Split = split;
+        }
+    }
+
+    // 按最佳轴分割
+    if (Axis == 0) std::sort(shapes.begin() + l, shapes.begin() + r + 1, cmpx);
+    if (Axis == 1) std::sort(shapes.begin() + l, shapes.begin() + r + 1, cmpy);
+    if (Axis == 2) std::sort(shapes.begin() + l, shapes.begin() + r + 1, cmpz);
+
+    // 递归
+    node->left = buildBVH(shapes, l, Split, n);
+    node->right = buildBVH(shapes, Split + 1, r, n);
+
+    return node;
+
+    //// 否则递归建树
+    //float lenx = node->BB.x() - node->AA.x();
+    //float leny = node->BB.y() - node->AA.y();
+    //float lenz = node->BB.z() - node->AA.z();
+    //// 按 x 划分
+    //if (lenx >= leny && lenx >= lenz)
+    //    std::sort(shapes.begin() + l, shapes.begin() + r + 1, cmpx);
+    //// 按 y 划分
+    //if (leny >= lenx && leny >= lenz)
+    //    std::sort(shapes.begin() + l, shapes.begin() + r + 1, cmpy);
+    //// 按 z 划分
+    //if (lenz >= lenx && lenz >= leny)
+    //    std::sort(shapes.begin() + l, shapes.begin() + r + 1, cmpz);
+
+    //// 递归
+    //int mid = (l + r) / 2;
+    //node->left = buildBVH(shapes, l, mid, n);
+    //node->right = buildBVH(shapes, mid + 1, r, n);
+
+    //return node;
+}
+float hitAABB(Ray r, vec3 AA, vec3 BB) {//与AABB包围盒的相交
+    // 1.0 / direction
+   
+    vec3 in = (BB - r.startPoint).array() / r.direction.array();
+    vec3 out = (AA - r.startPoint).array() / r.direction.array();
+
+    vec3 tmax(max(in.x(),out.x()),max(in.y(),out.y()),max(in.z(),out.z()));// = max(in, out);
+    vec3 tmin(min(in.x(), out.x()),min(in.y(), out.y()), min(in.z(), out.z())); //= min(in, out);
+
+    float t1 = min(tmax.x(), min(tmax.y(), tmax.z()));
+    float t0 = max(tmin.x(), max(tmin.y(), tmin.z()));
+
+    return (t1 >= t0) ? ((t0 > 0.0) ? (t0) : (t1)) : (-1);
+}
+//和AABBtree子节点的求交
+HitResult hitTriangleArray(Ray ray, std::vector<Shape*>& shapes, int l, int r) {
+    HitResult res, tepres;
+    res.distance = FLT_MAX;
+    for (int i = l; i <= r; i++) {
+        tepres =shapes[i]->intersect(ray);
+        if (tepres.isHit && tepres.distance < res.distance) {
+            res = tepres;
+        }
+    }
+    return res;
+}
+HitResult hitBVH(Ray ray, std::vector<Shape*>& shapes, BVHNode* root) {
+    if (root == NULL) 
+        return HitResult();
+
+    // 是叶子 
+    if (root->n > 0) {
+        return hitTriangleArray(ray, shapes, root->index, root->n + root->index - 1);
+    }
+
+    // 和左右子树 AABB 求交
+    float d1 = FLT_MAX, d2 = FLT_MAX;
+    if (root->left) d1 = hitAABB(ray, root->left->AA, root->left->BB);
+    if (root->right) d2 = hitAABB(ray, root->right->AA, root->right->BB);
+
+    // 递归结果
+    HitResult r1, r2;
+    if (d1 > 0) r1 = hitBVH(ray, shapes, root->left);
+    if (d2 > 0) r2 = hitBVH(ray, shapes, root->right);
+
+    return r1.distance < r2.distance ? (r1.isHit?r1:r2) : (r2.isHit?r2:r1);
 }
