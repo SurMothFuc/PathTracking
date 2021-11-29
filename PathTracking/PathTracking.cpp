@@ -5,21 +5,22 @@
 #include "common.h"
 #include "Secne.h"
 
-
+#define vec3 Vector3f
 
 void imshow(double* SRC,Scene scene);
 HitResult shoot(Scene scene, Ray ray);
-vec3 pathTracing(Scene scene, Ray ray,int depth);
+vec3 pathTracing(Scene scene, Ray ray, int depth, BVHNode* root);
 void readObj(std::string filepath, Scene& scene);
 
-#define vec3 Vector3f
+
 
 int main()
 {
-    // 采样次数
-    const int SAMPLE =8;
+    
+    
+    const int SAMPLE =1;
     // 每次采样的亮度
-    const double BRIGHTNESS = (2.0f * 3.1415926f) * (1.0f / double(SAMPLE));//因为是在半球上的均匀采样
+    const double BRIGHTNESS =  (1.0f / double(SAMPLE));//因为是在半球上的均匀采样
 
 
     Scene scene;
@@ -60,6 +61,10 @@ int main()
     scene.addShape(new Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1), vec3(0.0, 1.0, 0.0)));
 
 
+    BVHNode* node; 
+    node = buildBVH(scene.shapes, 0, scene.shapes.size() - 1, 8);
+
+
     double* image = (double*)malloc(sizeof(double) * scene.WIDTH * scene.HEIGHT * 3);
     memset(image, 0.0, sizeof(double) * scene.WIDTH * scene.HEIGHT * 3);
     /*   for (int j = 0; j < 720; j++) {
@@ -79,8 +84,8 @@ int main()
     ProcessBar processbar(SAMPLE, "path tracing:");
     processbar.start();
     int count = 0;
-    omp_set_num_threads(8); // 线程个数
-    #pragma omp parallel for
+    //omp_set_num_threads(8); // 线程个数
+    //#pragma omp parallel for
     for (int k = 0; k < SAMPLE; k++)
     {
        // cout << k << endl;
@@ -97,7 +102,9 @@ int main()
                 Ray ray;
                 ray.startPoint = coord;
                 ray.direction = direction;
-                HitResult res = shoot(scene, ray);
+                
+                //HitResult res = shoot(scene, ray);
+                HitResult res = hitBVH(ray, scene.shapes, node);
 
                 vec3 color = vec3(0.0, 0.0, 0.0);
 
@@ -121,13 +128,13 @@ int main()
                         if (r < res.material.specularRate)  // 镜面反射
                         {
                             randomRay.direction = reflect(ray.direction, res.material.normal).normalized();
-                            color = pathTracing(scene, randomRay, 0) * BRIGHTNESS;
+                            color = pathTracing(scene, randomRay, 0,node) * BRIGHTNESS;
                         }
                         // 颜色积累
                         else {
                             vec3 srcColor = res.material.color;
-                            vec3 ptColor = pathTracing(scene, randomRay, 0);
-                            color = ptColor.array() * srcColor.array() * BRIGHTNESS;    // 和原颜色混合
+                            vec3 ptColor = pathTracing(scene, randomRay, 0,node);
+                            color = 2*ptColor.array() * srcColor.array() * BRIGHTNESS;    // 和原颜色混合
                         }
 
                     }
@@ -151,6 +158,9 @@ int main()
     processbar.end();
     imshow(image,scene);
     omp_destroy_lock(&lock);
+
+
+    cout << totalcount << endl;
 }
 
 
@@ -188,24 +198,27 @@ void readObj(std::string filepath,Scene& scene) {
             sin >> v0 >> v1 >> v2;
             Triangle* tep;
             tep = new Triangle(vertices[v0-1], vertices[v1 - 1], vertices[v2 - 1], vec3(1.0, 1.0, 1.0));
-
+            tep->material.specularRate = 0.9;
             //tep->material.isEmissive = true;
             scene.addShape(tep);
 
         }
     }
+   
 }
 
 
 
 
 
-vec3 pathTracing(Scene scene, Ray ray, int depth)
+vec3 pathTracing(Scene scene, Ray ray, int depth, BVHNode* root)
 {
     if (depth > 8) 
         return vec3(0.0,0.0,0.0);
 
-    HitResult res = shoot(scene, ray);
+    //HitResult res = shoot(scene, ray);
+
+    HitResult res = hitBVH(ray,scene.shapes,root);
 
     if (!res.isHit) 
         return vec3(0.0, 0.0, 0.0); // 未命中
@@ -232,13 +245,13 @@ vec3 pathTracing(Scene scene, Ray ray, int depth)
     if (r < res.material.specularRate)  // 镜面反射
     {
         randomRay.direction = reflect(ray.direction, res.material.normal).normalized();
-        color = pathTracing(scene, randomRay, depth + 1) * cosine;
+        color = pathTracing(scene, randomRay, depth + 1,root) * cosine;
     }
     else    // 漫反射
     {
         vec3 srcColor = res.material.color;
-        vec3 ptColor = pathTracing(scene, randomRay, depth + 1) * cosine;
-        color = ptColor.array() * srcColor.array();    // 和原颜色混合
+        vec3 ptColor = pathTracing(scene, randomRay, depth + 1,root) * cosine;
+        color = 2*ptColor.array() * srcColor.array();    // 和原颜色混合
     }
     return color / P;
 }
