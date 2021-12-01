@@ -14,7 +14,6 @@ using namespace Eigen;
 
 
 
-int totalcount = 0;
 
 template<class T>
 T Clamp(T x, T min, T max)//截断函数
@@ -32,6 +31,8 @@ public:
     vec3 normal = vec3(0, 0, 0);    // 法向量
     vec3 color = vec3(0, 0, 0);     // 颜色
     double specularRate = 0.0f;      // 反射光占比
+    double refractRate = 0.0f;      // 折射光占比
+    double refractAngle = 1.0f;     // 折射率
 };
 class HitResult//求交的辅助类 保存交点的结果
 {
@@ -57,6 +58,54 @@ public:
     virtual vec3 minAA() { return vec3(0.0, 0.0, 0.0); }
     virtual vec3 maxBB() { return vec3(0.0, 0.0, 0.0); }
 };
+class Sphere : public Shape
+{
+public:
+    Sphere() {}
+    Sphere(vec3 o, double r, vec3 c) { O = o; R = r; material.color = c; center = O; }
+    vec3 O;             // 圆心
+    double R;           // 半径
+    Material material;  // 材质
+
+    // 与光线求交
+    HitResult intersect(Ray ray)
+    {
+        HitResult res;
+
+        vec3 S = ray.startPoint;        // 射线起点
+        vec3 d = ray.direction;         // 射线方向
+
+        float OS = (O - S).norm();
+        float SH = (O - S).dot(d);
+        float OH = sqrt(pow(OS, 2) - pow(SH, 2));
+
+        if (OH > R) return res; // OH大于半径则不相交
+
+        float PH = sqrt(pow(R, 2) - pow(OH, 2));
+
+        float t1 = SH - PH;
+        float t2 = SH + PH;
+        float t = (t1 < 0) ? (t2) : (t1);   // 最近距离
+        vec3 P = S + t * d;     // 交点
+
+        // 防止自己交自己
+        if (fabs(t1) < 0.0005f || fabs(t2) < 0.0005f) return res;
+
+        // 装填返回结果
+        res.isHit = true;
+        res.distance = t;
+        res.hitPoint = P;
+        res.material = material;
+        res.material.normal = (P - O).normalized(); // 要返回正确的法向
+        return res;
+    }
+    vec3 minAA() {
+        return vec3(O.x()-R,O.y()-R,O.z()-R);
+    }
+    vec3 maxBB() {
+        return vec3(O.x() + R, O.y() + R, O.z() + R);
+    }
+};
 class Triangle : public Shape
 {
 public:
@@ -74,8 +123,6 @@ public:
     // 与光线求交
     HitResult intersect(Ray ray)
     {
-
-        totalcount++;
         HitResult res;
         vec3 S = ray.startPoint;
         vec3 d = ray.direction;
@@ -206,7 +253,34 @@ vec3 reflect(vec3 I, vec3 N)
 {
     return I - N * 2 * (I.transpose() * N);
 }
+bool refract(vec3 I, vec3 N, float eta,vec3& refracted)
+{
+    float a = I.transpose() * N;
+    float cosi = Clamp(a, -1.0f, 1.0f);
+    vec3 n = N;
+    if (cosi < 0) { cosi = -cosi; }
+    else {eta=1.0/eta; n = -N; }
+    float k = 1 - eta * eta * (1 - cosi * cosi);
+    if (k < 0)
+        return false;
+    else {
+        refracted = (eta * I + (eta * cosi - sqrtf(k)) * n).normalized();
+        return true;
+    }
 
+   /* vec3 uv = (I).normalized();
+    float dt = uv.dot(N);
+    float d = 1.0 - eta * eta * (1 - dt * dt);
+    if (d > 0) {
+        refracted = eta * (uv - N * dt) - N * sqrt(d);
+        return true;
+    }
+    else {
+        return false;
+    }*/
+
+
+}
 
 //比较函数用以进行bvh划分
 bool cmpx(Shape* t1,  Shape* t2) {
