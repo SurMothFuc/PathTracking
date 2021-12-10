@@ -18,7 +18,7 @@ int main()
 {
     
     
-    const int SAMPLE =2048;
+    const int SAMPLE =256;
     // 每次采样的亮度
     const double BRIGHTNESS =  (1.0f / double(SAMPLE));
 
@@ -58,11 +58,23 @@ int main()
     scene.addShape(new Triangle(vec3(1, -1, -1), vec3(-1, 1, -1), vec3(-1, -1, -1), vec3(1.0, 1.0, 1.0)));
     scene.addShape(new Triangle(vec3(1, -1, -1), vec3(1, 1, -1), vec3(-1, 1, -1), vec3(1.0, 1.0, 1.0)));
     // left
-    scene.addShape(new Triangle(vec3(-1, -1, -1), vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1.0, 0.0, 0.0)));
-    scene.addShape(new Triangle(vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(-1, 1, 1), vec3(1.0, 0.0, 0.0)));
+    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1.0, 0.0, 0.0));
+    tep->material.specularRate = 0.9;
+    tep->material.isEmissive = true;
+    scene.addShape(tep);
+    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(-1, 1, 1), vec3(1.0, 0.0, 0.0));
+    tep->material.specularRate = 0.9;
+    tep->material.isEmissive = true;
+    scene.addShape(tep);
     // right
-    scene.addShape(new Triangle(vec3(1, 1, 1), vec3(1, -1, -1), vec3(1, -1, 1), vec3(0.0, 1.0, 0.0)));
-    scene.addShape(new Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1), vec3(0.0, 1.0, 0.0)));
+    tep = new Triangle(vec3(1, 1, 1), vec3(1, -1, -1), vec3(1, -1, 1), vec3(0.0, 1.0, 0.0));
+    tep->material.specularRate = 0.9;
+    tep->material.isEmissive = true;
+    scene.addShape(tep);
+    tep = new Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1), vec3(0.0, 1.0, 0.0));
+    tep->material.specularRate = 0.9;
+    tep->material.isEmissive = true;
+    scene.addShape(tep);
 
 
     BVHNode* node; 
@@ -88,7 +100,7 @@ int main()
     ProcessBar processbar(SAMPLE, "path tracing:");
     processbar.start();
     int count = 0;
-    omp_set_num_threads(4); // 线程个数
+    omp_set_num_threads(8); // 线程个数
     #pragma omp parallel for
     for (int k = 0; k < SAMPLE; k++)
     {
@@ -108,7 +120,7 @@ int main()
                 ray.direction = direction;
                 
 
-                vec3 color = 2*PI*pathTracing(scene, ray, 0, node)*BRIGHTNESS;
+                vec3 color =pathTracing(scene, ray, 0, node)*BRIGHTNESS;
 
 
 
@@ -225,8 +237,8 @@ vec3 pathTracing(Scene scene, Ray& ray, int depth, BVHNode* root)
     randomRay.direction = randomDirection(res.material.normal);
 
     float cosine = (-ray.direction).dot(res.material.normal);
-    if (depth == 0)
-        cosine = 1;
+   /* if (depth == 0)
+        cosine = 1;*/
     vec3 color(0, 0, 0);
 
     r = randf();
