@@ -18,7 +18,7 @@ int main()
 {
     
     
-    const int SAMPLE =256;
+    const int SAMPLE =32;
     // 每次采样的亮度
     const double BRIGHTNESS =  (1.0f / double(SAMPLE));
 
@@ -44,9 +44,9 @@ int main()
 
     //under
     Triangle* tep;
-    tep = new Triangle(vec3(1, -1, 1), vec3(-1, -1, -1), vec3(-1, -1, 1), vec3(1.0, 1.0, 1.0));
+    tep = new Triangle(vec3(1, -1, 1), vec3(-1, -1, -1), vec3(-1, -1, 1), vec3(1.0, 0.0, 0.0));
     scene.addShape(tep);
-    tep = new Triangle(vec3(1, -1, 1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(1.0, 1.0, 1.0));
+    tep = new Triangle(vec3(1, -1, 1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(0.0, 1.0,0.0));
     scene.addShape(tep);
     // top
    
@@ -58,22 +58,22 @@ int main()
     scene.addShape(new Triangle(vec3(1, -1, -1), vec3(-1, 1, -1), vec3(-1, -1, -1), vec3(1.0, 1.0, 1.0)));
     scene.addShape(new Triangle(vec3(1, -1, -1), vec3(1, 1, -1), vec3(-1, 1, -1), vec3(1.0, 1.0, 1.0)));
     // left
-    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1.0, 0.0, 0.0));
+    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1.0, 1.0, 1.0));
     tep->material.specularRate = 0.9;
-    tep->material.isEmissive = true;
+    //tep->material.isEmissive = true;
     scene.addShape(tep);
-    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(-1, 1, 1), vec3(1.0, 0.0, 0.0));
+    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(-1, 1, 1), vec3(1.0, 1.0, 1.0));
     tep->material.specularRate = 0.9;
-    tep->material.isEmissive = true;
+   // tep->material.isEmissive = true;
     scene.addShape(tep);
     // right
-    tep = new Triangle(vec3(1, 1, 1), vec3(1, -1, -1), vec3(1, -1, 1), vec3(0.0, 1.0, 0.0));
+    tep = new Triangle(vec3(1, 1, 1), vec3(1, -1, -1), vec3(1, -1, 1), vec3(1.0, 1.0, 1.0));
     tep->material.specularRate = 0.9;
-    tep->material.isEmissive = true;
+   // tep->material.isEmissive = true;
     scene.addShape(tep);
-    tep = new Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1), vec3(0.0, 1.0, 0.0));
+    tep = new Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1), vec3(1.0, 1.0, 1.0));
     tep->material.specularRate = 0.9;
-    tep->material.isEmissive = true;
+   // tep->material.isEmissive = true;
     scene.addShape(tep);
 
 
@@ -120,7 +120,7 @@ int main()
                 ray.direction = direction;
                 
 
-                vec3 color =pathTracing(scene, ray, 0, node)*BRIGHTNESS;
+                vec3 color =2*3.14*pathTracing(scene, ray, 0, node)*BRIGHTNESS;
 
 
 
