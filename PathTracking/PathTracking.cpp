@@ -18,7 +18,7 @@ int main()
 {
     
     
-    const int SAMPLE =32;
+    const int SAMPLE =64;
     // 每次采样的亮度
     const double BRIGHTNESS =  (1.0f / double(SAMPLE));
 
@@ -26,7 +26,7 @@ int main()
     Scene scene;
 
 
-    readObj("./bunny.obj", scene);
+    readObj("./bunny_1000.obj", scene);
     //Sphere* s = new Sphere(vec3(0, -0.4, 0), 0.4, vec3(1.0, 1.0, 1.0));
    // s->material.refractAngle = 0.6;
   //  s->material.refractRate = 0.95;
@@ -34,7 +34,7 @@ int main()
     //scene.addShape(s);
 
     // 光源
-    Triangle l1 = Triangle(vec3(0.4, 0.99, 0.4), vec3(-0.4, 0.99, -0.4), vec3(-0.4, 0.99, 0.4), vec3(1.0, 1.0, 1.0));
+    Triangle l1 = Triangle(vec3(0.4, 0.99, 0.4), vec3(-0.4, 0.99, -0.4), vec3(-0.4, 0.99, 0.4), vec3(1.0,1.0, 1.0));
     Triangle l2 = Triangle(vec3(0.4, 0.99, 0.4), vec3(0.4, 0.99, -0.4), vec3(-0.4, 0.99, -0.4), vec3(1.0, 1.0, 1.0));
     l1.material.isEmissive = true;
     l2.material.isEmissive = true;
@@ -44,9 +44,9 @@ int main()
 
     //under
     Triangle* tep;
-    tep = new Triangle(vec3(1, -1, 1), vec3(-1, -1, -1), vec3(-1, -1, 1), vec3(1.0, 0.0, 0.0));
+    tep = new Triangle(vec3(1, -1, 1), vec3(-1, -1, -1), vec3(-1, -1, 1), vec3(1.0, 1.0, 1.0));
     scene.addShape(tep);
-    tep = new Triangle(vec3(1, -1, 1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(0.0, 1.0,0.0));
+    tep = new Triangle(vec3(1, -1, 1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(1.0, 1.0,1.0));
     scene.addShape(tep);
     // top
    
@@ -58,21 +58,21 @@ int main()
     scene.addShape(new Triangle(vec3(1, -1, -1), vec3(-1, 1, -1), vec3(-1, -1, -1), vec3(1.0, 1.0, 1.0)));
     scene.addShape(new Triangle(vec3(1, -1, -1), vec3(1, 1, -1), vec3(-1, 1, -1), vec3(1.0, 1.0, 1.0)));
     // left
-    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1.0, 1.0, 1.0));
-    tep->material.specularRate = 0.9;
+    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1.0, 0.0, 0.0));
+   // tep->material.specularRate = 0.9;
     //tep->material.isEmissive = true;
     scene.addShape(tep);
-    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(-1, 1, 1), vec3(1.0, 1.0, 1.0));
-    tep->material.specularRate = 0.9;
+    tep = new Triangle(vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(-1, 1, 1), vec3(1.0, 0.0, 0.0));
+    //tep->material.specularRate = 0.9;
    // tep->material.isEmissive = true;
     scene.addShape(tep);
     // right
-    tep = new Triangle(vec3(1, 1, 1), vec3(1, -1, -1), vec3(1, -1, 1), vec3(1.0, 1.0, 1.0));
-    tep->material.specularRate = 0.9;
+    tep = new Triangle(vec3(1, 1, 1), vec3(1, -1, -1), vec3(1, -1, 1), vec3(0.0, 1.0, 0.0));
+   // tep->material.specularRate = 0.9;
    // tep->material.isEmissive = true;
     scene.addShape(tep);
-    tep = new Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1), vec3(1.0, 1.0, 1.0));
-    tep->material.specularRate = 0.9;
+    tep = new Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1), vec3(0.0, 1.0,0.0));
+   // tep->material.specularRate = 0.9;
    // tep->material.isEmissive = true;
     scene.addShape(tep);
 
@@ -100,7 +100,7 @@ int main()
     ProcessBar processbar(SAMPLE, "path tracing:");
     processbar.start();
     int count = 0;
-    omp_set_num_threads(8); // 线程个数
+    omp_set_num_threads(6); // 线程个数
     #pragma omp parallel for
     for (int k = 0; k < SAMPLE; k++)
     {
@@ -120,7 +120,7 @@ int main()
                 ray.direction = direction;
                 
 
-                vec3 color =2*3.14*pathTracing(scene, ray, 0, node)*BRIGHTNESS;
+                vec3 color =2*PI*pathTracing(scene, ray, 0, node)*BRIGHTNESS;
 
 
 
@@ -184,19 +184,23 @@ void readObj(std::string filepath,Scene& scene) {
         sin >> type;
         if (type == "v") {
             sin >> x >> y >> z;
-            vec3 point = 7 * vec3(x, y, z);
+           /* vec3 point = 7 * vec3(x, y, z);
             point.z() ;
             point.y() -= 0.9;
-            point.x() += 0.09;
+            point.x() += 0.09;*/
+            vec3 point =  0.7*vec3(x, y, z);
+            point.z()-=0.1;
+            point.y() -= 0.1;
+            point.x();
             vertices.push_back(point);
         }
         if (type == "f") {
             sin >> v0 >> v1 >> v2;
             Triangle* tep;
             tep = new Triangle(vertices[v0-1], vertices[v1 - 1], vertices[v2 - 1], vec3(1.0, 1.0, 1.0));
-           // tep->material.specularRate = 0.9;
-           // tep->material.refractAngle = 0.6;
-           // tep->material.refractRate = 0.95;
+         /*   tep->material.specularRate = 0.2;
+            tep->material.refractAngle = 0.6;
+            tep->material.refractRate = 0.95;*/
             //tep->material.isEmissive = true;
             scene.addShape(tep);
 
@@ -236,9 +240,9 @@ vec3 pathTracing(Scene scene, Ray& ray, int depth, BVHNode* root)
     randomRay.startPoint = res.hitPoint;
     randomRay.direction = randomDirection(res.material.normal);
 
-    float cosine = (-ray.direction).dot(res.material.normal);
-   /* if (depth == 0)
-        cosine = 1;*/
+    float cosine = fabs((-ray.direction).dot(res.material.normal));
+    if (depth == 0)
+        cosine = 1;
     vec3 color(0, 0, 0);
 
     r = randf();
